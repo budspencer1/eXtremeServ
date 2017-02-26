@@ -2699,17 +2699,20 @@ namespace server
 
             case N_TEXT:
             {
-                QUEUE_AI;
-                QUEUE_MSG;
+                //QUEUE_AI;
+                //QUEUE_MSG;
                 getstring(text, p);
                 filtertext(text, text);
-                QUEUE_STR(text);
+		if(extreme::isflooding(ci,(int)type))break;//extremeserver
+                //QUEUE_STR(text);
+		QUEUE_AI; 
                 if(isdedicatedserver()) logoutf("%s: %s", colorname(cq), text);
                 break;
             }
 
             case N_SAYTEAM:
             {
+		if(extreme::isflooding(ci,type))break;//extremeserver
                 getstring(text, p);
                 if(!ci || !cq || (ci->state.state==CS_SPECTATOR && !ci->local && !ci->privilege) || !m_teammode || !cq->team[0]) break;
                 loopv(clients)
@@ -2724,8 +2727,9 @@ namespace server
 
             case N_SWITCHNAME:
             {
-                QUEUE_MSG;
+                //QUEUE_MSG;
                 getstring(text, p);
+		if(extreme::isflooding(ci,type))break;//extremeserver
                 filtertext(ci->name, text, false, MAXNAMELEN);
                 if(!ci->name[0]) copystring(ci->name, "unnamed");
                 QUEUE_STR(ci->name);
@@ -2735,13 +2739,15 @@ namespace server
             case N_SWITCHMODEL:
             {
                 ci->playermodel = getint(p);
-                QUEUE_MSG;
+		if(extreme::isflooding(ci,type))break;
+                //QUEUE_MSG;
                 break;
             }
 
             case N_SWITCHTEAM:
             {
                 getstring(text, p);
+		if(extreme::isflooding(ci,type))break;//extremeserver
                 filtertext(text, text, false, MAXTEAMLEN);
                 if(m_teammode && text[0] && strcmp(ci->team, text) && (!smode || smode->canchangeteam(ci, ci->team, text)) && addteaminfo(text))
                 {

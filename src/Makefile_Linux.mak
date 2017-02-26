@@ -61,7 +61,7 @@ endif
 
 CXXFLAGS=-fomit-frame-pointer -Wall -fsigned-char -DSTANDALONE
 
-INCLUDES= -Ishared -Iengine -Ifpsgame
+INCLUDES= -Ishared -Iengine -Ifpsgame -Iextremeserver
 
 ### Embended ENET
 ifeq ($(ENET_USE_SYSTEM_LIBS),true)

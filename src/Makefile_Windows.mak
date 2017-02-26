@@ -19,7 +19,7 @@ SERVER_NAME=XtremeServ.exe
 CXXFLAGS= -fpermissive -fomit-frame-pointer -Wall -fsigned-char -DSTANDALONE -static -Wl,-subsystem,windows
 SERVER_INCLUDES= -I/usr/i686-w64-mingw32/include/ $(INCLUDES)  
 SERVER_LIBS= -lz.dll -lgcc -lstdc+
-INCLUDES= -Ishared -Iengine -Ifpsgame+
+INCLUDES= -Ishared -Iengine -Ifpsgame
 #override CXXFLAGS+= -O0 -g -DDEBUG # uncomment for debugging
 
 ifeq (,$(findstring -g,$(CXXFLAGS)))
@@ -31,7 +31,7 @@ endif
 #includes
 
 SERVER_LIBS= -lz.dll -lgcc -lstdc++
-INCLUDES= -Ishared -Iengine -Ifpsgame+
+INCLUDES= -Ishared -Iengine -Ifpsgame -Iextremeserver
 
 ifeq ($(ENET_USE_SYSTEM_LIBS),true)
 else
@@ -47,7 +47,8 @@ SERVER_OBJS= \
 	engine/command-standalone.o \
 	engine/server-standalone.o \
 	fpsgame/entities-standalone.o \
-	fpsgame/server-standalone.o
+	fpsgame/server-standalone.o \
+	extremeserver/antiflood-standalone.o
 
 
 
