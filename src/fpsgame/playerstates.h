@@ -28,7 +28,7 @@ namespace server
     struct clientinfo;
 
 	// extremeserver
-    	enum{FT_OTHER=0,FT_TEXT,FT_NAME,FT_MODEL,FT_TEAM,FT_EDIT,FT_NUMTYPES};
+    enum{FT_OTHER=0,FT_TEXT,FT_NAME,FT_MODEL,FT_TEAM,FT_EDIT,FT_NUMTYPES};
 	inline size_t gettype(int type);
 	bool isflooding(server::clientinfo*ci,int type);
 	struct fstate 
@@ -163,7 +163,7 @@ namespace server
             frags = flags = deaths = teamkills = shotdamage = damage = tokens = 0;
 
             lastdeath = 0;
-	    exts.standard();//extremeserver
+			exts.standard();//extremeserver
             respawn();
         }
 
@@ -205,7 +205,7 @@ namespace server
             damage = gs.damage;
             timeplayed = gs.timeplayed;
             effectiveness = gs.effectiveness;
-	    ext=gs.exts;//extremeserver
+			ext=gs.exts;//extremeserver
         }
 
         void restore(gamestate &gs)
@@ -220,7 +220,7 @@ namespace server
             gs.damage = damage;
             gs.timeplayed = timeplayed;
             gs.effectiveness = effectiveness;
-	    ext=gs.exts;//extremeserver
+			ext=gs.exts;//extremeserver
         }
     };
 
@@ -253,7 +253,7 @@ namespace server
         void *authchallenge;
         int authkickvictim;
         char *authkickreason;
-	estate ext;//extremeserver
+		estate ext;//extremeserver
         clientinfo() : getdemo(NULL), getmap(NULL), clipboard(NULL), authchallenge(NULL), authkickreason(NULL) { reset(); }
         ~clientinfo() { events.deletecontents(); cleanclipboard(); cleanauth(); }
 
@@ -410,11 +410,11 @@ namespace server
     extern string smapname;
     extern int interm;
     extern enet_uint32 lastsend;
-    extern int mastermode, mastermask;
+    extern int mastermode,mastermask;
     extern stream *mapdata;
 
-    extern vector<uint> allowedips;
-    extern vector<ban> bannedips;
+    extern vector<uint>allowedips;
+    extern vector<ban>bannedips;
     extern vector<clientinfo*>connects,clients,bots;
     extern vector<savedscore>scores;
 }

@@ -26,7 +26,6 @@ namespace server
 
 namespace extreme
 {
-
 	inline size_t gettype(int type)
 	{
 		size_t ftype=FT_OTHER;
