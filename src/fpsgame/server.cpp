@@ -1,5 +1,6 @@
 #include "game.h"
-#include"playerstates.h"
+#include"playerstates.h"//extremeserver
+#include"cmdhandler.h"//extremeserver
 
 namespace game
 {
@@ -89,6 +90,10 @@ namespace server
     int curmaprotation = 0;
 
     VAR(lockmaprotation, 0, 0, 2);
+
+    VAR(command_caller,0,-1,INT_MAX); // command caller // extremeserver
+	SVAR(command_text,""); // command text (arguments)  // extremeserver
+	SVAR(command_prefix,"#"); // command trigger (prefix) // extremeserver
 
     void maprotationreset()
     {
@@ -2382,6 +2387,16 @@ namespace server
         if(servermotd[0]) sendf(ci->clientnum, 1, "ris", N_SERVMSG, servermotd);
     }
 
+	void say(const char*str)
+	{//extremeserver
+		if(str)
+		{
+			sendservmsg(str);
+		}
+	}
+	COMMAND(say,"s");
+
+
     void parsepacket(int sender, int chan, packetbuf &p)     // has to parse exactly each byte of the packet
     {
         if(sender<0 || p.packet->flags&ENET_PACKET_FLAG_UNSEQUENCED || chan > 2) return;
@@ -2703,16 +2718,23 @@ namespace server
                 //QUEUE_MSG;
                 getstring(text, p);
                 filtertext(text, text);
-		if(extreme::isflooding(ci,(int)type))break;//extremeserver
+				if(extreme::isflooding(ci,(int)type))break;//extremeserver
+				if(strlen(text)>strlen(command_prefix) && (strncmp(command_prefix, text, strlen(command_prefix))==0))
+				{
+					command_text=text;
+					command_caller=(int)ci->clientnum;
+					extreme::executecommandhandler();//extremeserver
+					break;
+				}
                 //QUEUE_STR(text);
-		QUEUE_AI; 
+				//QUEUE_AI; 
                 if(isdedicatedserver()) logoutf("%s: %s", colorname(cq), text);
                 break;
             }
 
             case N_SAYTEAM:
             {
-		if(extreme::isflooding(ci,type))break;//extremeserver
+				if(extreme::isflooding(ci,type))break;//extremeserver
                 getstring(text, p);
                 if(!ci || !cq || (ci->state.state==CS_SPECTATOR && !ci->local && !ci->privilege) || !m_teammode || !cq->team[0]) break;
                 loopv(clients)
@@ -2729,7 +2751,7 @@ namespace server
             {
                 //QUEUE_MSG;
                 getstring(text, p);
-		if(extreme::isflooding(ci,type))break;//extremeserver
+				if(extreme::isflooding(ci,type))break;//extremeserver
                 filtertext(ci->name, text, false, MAXNAMELEN);
                 if(!ci->name[0]) copystring(ci->name, "unnamed");
                 QUEUE_STR(ci->name);
