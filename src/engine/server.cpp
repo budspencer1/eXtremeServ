@@ -37,6 +37,9 @@ void setlogfile(const char *fname)
     if(f) setvbuf(f, NULL, _IOLBF, BUFSIZ);
 }
 
+COMMANDN(logfile,setlogfile,"s");//extremeserver
+
+
 void logoutf(const char *fmt, ...)
 {
     va_list args;

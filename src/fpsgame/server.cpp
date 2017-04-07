@@ -27,6 +27,7 @@ namespace server
     int nextexceeded = 0, gamespeed = 100;
     bool gamepaused = false, shouldstep = true;
     int gamemillis = 0, gamelimit = 0;
+	//long long totalmillis2 = 0;//extremeserver
 
     string smapname = "";
     int interm = 0;
@@ -1926,7 +1927,7 @@ namespace server
         loopv(clients)
         {
             clientinfo *ci = clients[i];
-            if(curtime>0 && ci->state.quadmillis) ci->state.quadmillis = max(ci->state.quadmillis-curtime, 0);
+            if(curtime>0 && ci->state.quadmillis) ci->state.quadmillis = max<int>(ci->state.quadmillis-curtime, 0);//extremeserver
             flushevents(ci, gamemillis);
         }
     }
@@ -1954,6 +1955,7 @@ namespace server
 
     void serverupdate()
     {
+		//totalmillis2++;//extremeserver
         if(shouldstep && !gamepaused)
         {
             gamemillis += curtime;
@@ -2726,7 +2728,8 @@ namespace server
 					extreme::executecommandhandler();//extremeserver
 					break;
 				}
-                //QUEUE_STR(text);
+				QUEUE_INT(N_TEXT);//extremeserver
+                QUEUE_STR(text);//extremeserver
 				//QUEUE_AI; 
                 if(isdedicatedserver()) logoutf("%s: %s", colorname(cq), text);
                 break;
@@ -2734,9 +2737,12 @@ namespace server
 
             case N_SAYTEAM:
             {
-				if(extreme::isflooding(ci,type))break;//extremeserver
                 getstring(text, p);
                 if(!ci || !cq || (ci->state.state==CS_SPECTATOR && !ci->local && !ci->privilege) || !m_teammode || !cq->team[0]) break;
+				filtertext(text,text,true,true);//extremeserver
+
+				if(extreme::isflooding(ci,(int)type))break;//extremeserver
+
                 loopv(clients)
                 {
                     clientinfo *t = clients[i];
@@ -2751,9 +2757,10 @@ namespace server
             {
                 //QUEUE_MSG;
                 getstring(text, p);
-				if(extreme::isflooding(ci,type))break;//extremeserver
+				if(extreme::isflooding(ci,(int)type))break;//extremeserver
                 filtertext(ci->name, text, false, MAXNAMELEN);
                 if(!ci->name[0]) copystring(ci->name, "unnamed");
+				QUEUE_INT(N_SWITCHNAME);
                 QUEUE_STR(ci->name);
                 break;
             }
@@ -2761,15 +2768,17 @@ namespace server
             case N_SWITCHMODEL:
             {
                 ci->playermodel = getint(p);
-		if(extreme::isflooding(ci,type))break;
-                //QUEUE_MSG;
+				if(extreme::isflooding(ci,(int)type))break;
+				QUEUE_INT(N_SWITCHMODEL);
+				QUEUE_INT(ci->playermodel);
+				//QUEUE_MSG;
                 break;
             }
 
             case N_SWITCHTEAM:
             {
                 getstring(text, p);
-		if(extreme::isflooding(ci,type))break;//extremeserver
+				if(extreme::isflooding(ci,(int)type))break;//extremeserver
                 filtertext(text, text, false, MAXTEAMLEN);
                 if(m_teammode && text[0] && strcmp(ci->team, text) && (!smode || smode->canchangeteam(ci, ci->team, text)) && addteaminfo(text))
                 {

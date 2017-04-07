@@ -3,7 +3,7 @@
 # Project:                  XtremeServ Sauerbraten
 # File Name:                Makefile_Windows.mak
 # Author:                   BudSpencer
-# Date:                     04.01.2017
+# Date:                     04.01.2017 
 #
 # Purpose:                  compile XtremeServ with i686-w64-mingw32-gcc compiler
 # Architecture (x->y):      Linux XX Bit ---> Windows 32 Bit
