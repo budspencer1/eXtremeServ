@@ -48,7 +48,9 @@ SERVER_OBJS= \
 	fpsgame/entities-standalone.o \
 	fpsgame/server-standalone.o \
 	extremeserver/antiflood-standalone.o \
-	extremeserver/cmdhandler-standalone.o
+	extremeserver/cmdhandler-standalone.o \
+	extremeserver/eventhandler-standalone.o
+
 
 default: release
 

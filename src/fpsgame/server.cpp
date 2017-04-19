@@ -1,6 +1,9 @@
 #include "game.h"
 #include"playerstates.h"//extremeserver
 #include"cmdhandler.h"//extremeserver
+#include "eventhandler.h"
+
+using namespace extreme;
 
 namespace game
 {
@@ -1787,6 +1790,7 @@ namespace server
 
     void suicide(clientinfo *ci)
     {
+	executeevent((const char *)"onsuicide", int2char(ci->clientnum));//event
         gamestate &gs = ci->state;
         if(gs.state!=CS_ALIVE) return;
         int fragvalue = smode ? smode->fragvalue(ci, ci) : -1;
@@ -1844,6 +1848,7 @@ namespace server
 
     void shotevent::process(clientinfo *ci)
     {
+	executeevent((const char *)"onshot", (const char *)concateventargs(2, int2char(ci->state.frags), int2char(ci->clientnum)));//event
         gamestate &gs = ci->state;
         int wait = millis - gs.lastshot;
         if(!gs.isalive(gamemillis) ||
@@ -1955,7 +1960,6 @@ namespace server
 
     void serverupdate()
     {
-		//totalmillis2++;//extremeserver
         if(shouldstep && !gamepaused)
         {
             gamemillis += curtime;
@@ -2726,6 +2730,8 @@ namespace server
 					command_text=text;
 					command_caller=(int)ci->clientnum;
 					extreme::executecommandhandler();//extremeserver
+					command_caller = -1;
+					command_text = newstring("");
 					break;
 				}
 				QUEUE_INT(N_TEXT);//extremeserver

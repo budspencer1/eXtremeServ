@@ -34,7 +34,7 @@ ifneq (,$(findstring amd64,$(shell uname -a)))
 PLATFORM_SUFFIX=64
 endif
 
-SERVER_PREFIX=XtremeServ
+SERVER_PREFIX=eXtremeServer
 SERVER_NAME=$(SERVER_PREFIX)
 ifneq (,$(findstring MINGW,$(PLATFORM)))
 SERVER_NAME=$(SERVER_NAME)$(PLATFORM_SUFFIX).exe
@@ -80,7 +80,8 @@ SERVER_OBJS= \
 	fpsgame/entities-standalone.o \
 	fpsgame/server-standalone.o \
 	extremeserver/antiflood-standalone.o \
-	extremeserver/cmdhandler-standalone.o 
+	extremeserver/cmdhandler-standalone.o \
+	extremeserver/eventhandler-standalone.o 
 	
 
 default: release
