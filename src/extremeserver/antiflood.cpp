@@ -1,6 +1,6 @@
 /*
  * Project: eXtremeServ Sauerbraten
- * File Name: antiflood.c
+ * File Name: antiflood.cpp
  * Author: BudSpencer
  * Date: 02, 2017
  * 
