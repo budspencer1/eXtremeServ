@@ -1,7 +1,7 @@
 #include "game.h"
 #include"playerstates.h"//extremeserver
 #include"cmdhandler.h"//extremeserver
-#include "eventhandler.h"
+#include "eventhandler.h"//extremeserver
 
 using namespace extreme;
 
@@ -30,7 +30,6 @@ namespace server
     int nextexceeded = 0, gamespeed = 100;
     bool gamepaused = false, shouldstep = true;
     int gamemillis = 0, gamelimit = 0;
-	//long long totalmillis2 = 0;//extremeserver
 
     string smapname = "";
     int interm = 0;
@@ -688,7 +687,7 @@ namespace server
         char *timestr = ctime(&t), *trim = timestr + strlen(timestr);
         while(trim>timestr && iscubespace(*--trim)) *trim = '\0';
         formatstring(d.info)("%s: %s, %s, %.2f%s", timestr, modename(gamemode), smapname, len > 1024*1024 ? len/(1024*1024.f) : len/1024.0f, len > 1024*1024 ? "MB" : "kB");
-        sendservmsgf("demo \"%s\" recorded", d.info);
+        sendservmsgf("\f4Demo: \f7Demo \"%s\" has been successfully recorded.", d.info);
         d.data = new uchar[len];
         d.len = len;
         demotmp->seek(0, SEEK_SET);
@@ -701,6 +700,7 @@ namespace server
         if(!demorecord) return;
 
         DELETEP(demorecord);
+	executeevent("onstopdemo", eventarglist(0));//extremeserver
 
         if(!demotmp) return;
         if(!maxdemos || !maxdemosize) { DELETEP(demotmp); return; }
@@ -737,7 +737,8 @@ namespace server
         stream *f = opengzfile(NULL, "wb", demotmp);
         if(!f) { DELETEP(demotmp); return; }
 
-        sendservmsg("recording demo");
+        sendservmsg("\f4Demo: \f7Server's recording demo for this match.");
+	executeevent("onrecorddemo", eventarglist(0));//extremeserver
 
         demorecord = f;
 
@@ -755,6 +756,7 @@ namespace server
 
     void listdemos(int cn)
     {
+	executeevent("onlistdemos", (char *)int2char(cn));//extremeserver
         packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
         putint(p, N_SENDDEMOLIST);
         putint(p, demos.length());
@@ -764,17 +766,18 @@ namespace server
 
     void cleardemos(int n)
     {
+	executeevent("oncleardemos", (char *)int2char(n));//extremeserver
         if(!n)
         {
             loopv(demos) delete[] demos[i].data;
             demos.shrink(0);
-            sendservmsg("cleared all demos");
+            sendservmsg("\f4Demo: \f7All demos have been cleared.");
         }
         else if(demos.inrange(n-1))
         {
             delete[] demos[n-1].data;
             demos.remove(n-1);
-            sendservmsgf("cleared demo %d", n);
+            sendservmsgf("\f4Demo: \f7Server has cleared demo %d.", n);
         }
     }
 
@@ -803,7 +806,9 @@ namespace server
         if(!demos.inrange(num-1)) return;
         demofile &d = demos[num-1];
         if((ci->getdemo = sendf(ci->clientnum, 2, "rim", N_SENDDEMO, d.len, d.data)))
+		{
             ci->getdemo->freeCallback = freegetdemo;
+		}
     }
 
     void enddemoplayback()
@@ -813,7 +818,7 @@ namespace server
 
         loopv(clients) sendf(clients[i]->clientnum, 1, "ri3", N_DEMOPLAYBACK, 0, clients[i]->clientnum);
 
-        sendservmsg("demo playback finished");
+        //sendservmsg("demo playback finished");
 
         loopv(clients) sendwelcome(clients[i]);
     }
@@ -826,14 +831,14 @@ namespace server
         msg[0] = '\0';
         defformatstring(file)("%s.dmo", smapname);
         demoplayback = opengzfile(file, "rb");
-        if(!demoplayback) formatstring(msg)("could not read demo \"%s\"", file);
+        if(!demoplayback) formatstring(msg)("\f3Error: \f7Server could not read demo \"%s\".", file);
         else if(demoplayback->read(&hdr, sizeof(demoheader))!=sizeof(demoheader) || memcmp(hdr.magic, DEMO_MAGIC, sizeof(hdr.magic)))
-            formatstring(msg)("\"%s\" is not a demo file", file);
+            formatstring(msg)("\f3Error: \f7File \"%s\" isn't a demo file.", file);
         else
         {
             lilswap(&hdr.version, 2);
-            if(hdr.version!=DEMO_VERSION) formatstring(msg)("demo \"%s\" requires an %s version of Cube 2: Sauerbraten", file, hdr.version<DEMO_VERSION ? "older" : "newer");
-            else if(hdr.protocol!=PROTOCOL_VERSION) formatstring(msg)("demo \"%s\" requires an %s version of Cube 2: Sauerbraten", file, hdr.protocol<PROTOCOL_VERSION ? "older" : "newer");
+            if(hdr.version!=DEMO_VERSION) formatstring(msg)("\f3Error: \f7Demo \"%s\" requires an %s version of Cube 2: Sauerbraten.", file, hdr.version<DEMO_VERSION ? "older" : "newer");
+            else if(hdr.protocol!=PROTOCOL_VERSION) formatstring(msg)("\f3Error: \f7Demo \"%s\" requires an %s version of Cube 2: Sauerbraten.", file, hdr.protocol<PROTOCOL_VERSION ? "older" : "newer");
         }
         if(msg[0])
         {
@@ -842,7 +847,7 @@ namespace server
             return;
         }
 
-        sendservmsgf("playing demo \"%s\"", file);
+        sendservmsgf("\f4Demo: \f7Server's playing demo \"%s\".", file);
 
         demomillis = 0;
         sendf(-1, 1, "ri3", N_DEMOPLAYBACK, 1, -1);
@@ -1018,17 +1023,17 @@ namespace server
             {
                 if(ci->state.state==CS_SPECTATOR) 
                 {
-                    sendf(ci->clientnum, 1, "ris", N_SERVMSG, "Spectators may not claim master.");
+                    sendf(ci->clientnum, 1, "ris", N_SERVMSG, "\f3Error: \f7Spectators may not claim master on that server.");
                     return false;
                 }
                 loopv(clients) if(ci!=clients[i] && clients[i]->privilege)
                 {
-                    sendf(ci->clientnum, 1, "ris", N_SERVMSG, "Master is already claimed.");
+                    sendf(ci->clientnum, 1, "ris", N_SERVMSG, "\f3Error: \f7You can't claim master when it's already claimed.");
                     return false;
                 }
                 if(!authname && !(mastermask&MM_AUTOAPPROVE) && !ci->privilege && !ci->local)
                 {
-                    sendf(ci->clientnum, 1, "ris", N_SERVMSG, "This server requires you to use the \"/auth\" command to claim master.");
+                    sendf(ci->clientnum, 1, "ris", N_SERVMSG, "\f3Error: \f7This server requires you to use the \"/auth\" command to claim master.");
                     return false;
                 }
             }
@@ -1053,10 +1058,10 @@ namespace server
         string msg;
         if(val && authname) 
         {
-            if(authdesc && authdesc[0]) formatstring(msg)("%s claimed %s as '\fs\f5%s\fr' [\fs\f0%s\fr]", colorname(ci), name, authname, authdesc);
-            else formatstring(msg)("%s claimed %s as '\fs\f5%s\fr'", colorname(ci), name, authname);
+            if(authdesc && authdesc[0]) formatstring(msg)("\f7Information: \f7Player %s claimed %s as '\fs\f5%s\fr'. [\fs\f0%s\fr]", colorname(ci), name, authname, authdesc);
+            else formatstring(msg)("\f0Information: \f7Player %s claimed %s as '\fs\f5%s\fr'.", colorname(ci), name, authname);
         } 
-        else formatstring(msg)("%s %s %s", colorname(ci), val ? "claimed" : "relinquished", name);
+        else formatstring(msg)("\f0Information: \f7Player %s has %s %s.", colorname(ci), val ? "claimed" : "relinquished", name);
         packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
         putint(p, N_SERVMSG);
         sendstring(msg, p);
@@ -1094,8 +1099,8 @@ namespace server
                     else formatstring(kicker)("%s as '\fs\f5%s\fr'", colorname(ci), authname);
                 }
                 else copystring(kicker, colorname(ci));
-                if(reason && reason[0]) sendservmsgf("%s kicked %s because: %s", kicker, colorname(vinfo), reason);
-                else sendservmsgf("%s kicked %s", kicker, colorname(vinfo));
+                if(reason && reason[0]) sendservmsgf("\f4Kick: \f7Player %s has been kicked %s because: %s.", kicker, colorname(vinfo), reason);
+                else sendservmsgf("\f4Kick: \f7Player %s has kicked Player %s.", kicker, colorname(vinfo));
                 uint ip = getclientip(victim);
                 addban(ip, 4*60*60000);
                 kickclients(ip, ci);
@@ -1354,6 +1359,7 @@ namespace server
             gs.health, gs.maxhealth,
             gs.armour, gs.armourtype,
             gs.gunselect, GUN_PISTOL-GUN_SG+1, &gs.ammo[GUN_SG]);
+	executeevent("onspawn", (char *)int2char(ci->clientnum)); //extremeserver
         gs.lastspawn = gamemillis;
     }
 
@@ -1565,7 +1571,9 @@ namespace server
         }
         notgotitems = false;
     }
-        
+       
+    VAR(recorddemo, 0, 1, 1);//extremeserver - record demo after every match
+
     void changemap(const char *s, int mode)
     {
         stopdemo();
@@ -1624,6 +1632,8 @@ namespace server
         }
 
         if(smode) smode->setup();
+	if(recorddemo) demonextmatch = true;
+	executeevent("onmapstart", eventarglist(0));//extremeserver
     }
 
     void rotatemap(bool next)
@@ -1678,7 +1688,7 @@ namespace server
             if(demorecord) enddemorecord();
             if(best && (best->count > (force ? 1 : maxvotes/2)))
             {
-                sendservmsg(force ? "vote passed by default" : "vote passed by majority");
+            	sendservmsg(force ? "\f4Vote: \f7The server has decided to play that map." : "\f4Vote: \f7The majority has decided to play that map.");
                 changemap(best->map, best->mode);
             }
             else rotatemap(true);
@@ -1695,7 +1705,7 @@ namespace server
             if(idx < 0) return;
             map = maprotations[idx].map;
         }
-        if(hasnonlocalclients()) sendservmsgf("local player forced %s on map %s", modename(mode), map[0] ? map : "[new map]");
+        if(hasnonlocalclients()) sendservmsgf("\f4Vote: \f7Local player has forced %s on map %s.", modename(mode), map[0] ? map : "[new map]");
         changemap(map, mode);
     }
 
@@ -1713,7 +1723,7 @@ namespace server
         }
         if(lockmaprotation && !ci->local && ci->privilege < (lockmaprotation > 1 ? PRIV_ADMIN : PRIV_MASTER) && findmaprotation(reqmode, map) < 0) 
         {
-            sendf(sender, 1, "ris", N_SERVMSG, "This server has locked the map rotation.");
+            sendf(sender, 1, "ris", N_SERVMSG, "\f3Error: \f7This server has locked the map rotation.");
             return;
         }
         copystring(ci->mapvote, map);
@@ -1722,15 +1732,16 @@ namespace server
         {
             if(demorecord) enddemorecord();
             if(!ci->local || hasnonlocalclients())
-                sendservmsgf("%s forced %s on map %s", colorname(ci), modename(ci->modevote), ci->mapvote[0] ? ci->mapvote : "[new map]");
+                sendservmsgf("\f4Vote: \f7Player %s has forced %s on map %s.", colorname(ci), modename(ci->modevote), ci->mapvote[0] ? ci->mapvote : "[new map]");
             changemap(ci->mapvote, ci->modevote);
         }
         else
         {
-            sendservmsgf("%s suggests %s on map %s (select map to vote)", colorname(ci), modename(reqmode), map[0] ? map : "[new map]");
+            sendservmsgf("\f4Suggest: \f7Player %s suggests %s on map %s Type /%s %s to vote for this map.", colorname(ci), modename(reqmode), map[0] ? map : "[new map]", modename(reqmode), map[0] ? map : "[new map]");
             checkvotes();
         }
     }
+    VAR(intermissiontime, 1000, 10000, INT_MAX);
 
     void checkintermission()
     {
@@ -1739,7 +1750,8 @@ namespace server
             sendf(-1, 1, "ri2", N_TIMEUP, 0);
             if(smode) smode->intermission();
             changegamespeed(100);
-            interm = gamemillis + 10000;
+	    executeevent("onintermission", eventarglist(0));//extremeserver
+            interm = gamemillis + intermissiontime;
         }
     }
 
@@ -1747,6 +1759,8 @@ namespace server
 
     void dodamage(clientinfo *target, clientinfo *actor, int damage, int gun, const vec &hitpush = vec(0, 0, 0))
     {
+	bool onteamkill, onfrag, onsuicide, ondeath; // extremeserver
+	onteamkill = onfrag = onsuicide = ondeath = false;// extremeserver
         gamestate &ts = target->state;
         ts.dodamage(damage);
         if(target!=actor && !isteam(target->team, actor->team)) actor->state.damage += damage;
@@ -1760,7 +1774,16 @@ namespace server
         }
         if(ts.health<=0)
         {
-            target->state.deaths++;
+	    ondeath = (actor != target);
+	    onfrag = ondeath;
+	    onsuicide = !ondeath;
+	    onteamkill = false;
+        target->state.deaths++;
+	    if(actor != target && isteam(actor->team, target->team))
+	    {
+			onfrag = false;
+			onteamkill = true;
+	    }
             int fragvalue = smode ? smode->fragvalue(target, actor) : (target==actor || isteam(target->team, actor->team) ? -1 : 1);
             actor->state.frags += fragvalue;
             if(fragvalue>0)
@@ -1785,12 +1808,21 @@ namespace server
             ts.deadflush = ts.lastdeath + DEATHMILLIS;
             // don't issue respawn yet until DEATHMILLIS has elapsed
             // ts.respawn();
+	    if(onfrag) executeevent("onfrag", eventarglist(2, int2char(actor->clientnum), int2char(target->clientnum)));//extremeserver
+	    if(ondeath) executeevent("ondeath", eventarglist(2, int2char(target->clientnum), int2char(actor->clientnum)));//extremeserver
+	    if(onteamkill) executeevent("onteamkill", eventarglist(2, int2char(actor->clientnum), int2char(target->clientnum)));//extremeserver
+	    if(onsuicide)
+	    {	
+		target->state.suicides++;//extremeserver
+		executeevent("onsuicide", (char *)int2char(target->clientnum));//extremeserver
+	    }
         }
+	// only if no self hit
+	if(actor != target) executeevent("onhit", eventarglist(2, int2char(actor->clientnum), int2char(target->clientnum)));//extremeserver
     }
 
     void suicide(clientinfo *ci)
     {
-	executeevent((const char *)"onsuicide", int2char(ci->clientnum));//event
         gamestate &gs = ci->state;
         if(gs.state!=CS_ALIVE) return;
         int fragvalue = smode ? smode->fragvalue(ci, ci) : -1;
@@ -1804,6 +1836,8 @@ namespace server
         gs.state = CS_DEAD;
         gs.lastdeath = gamemillis;
         gs.respawn();
+	ci->state.suicides++;//extremeserver
+	executeevent("onsuicide", (char *)int2char(ci->clientnum));//extremeserver
     }
 
     void suicideevent::process(clientinfo *ci)
@@ -1848,7 +1882,6 @@ namespace server
 
     void shotevent::process(clientinfo *ci)
     {
-	executeevent((const char *)"onshot", (const char *)concateventargs(2, int2char(ci->state.frags), int2char(ci->clientnum)));//event
         gamestate &gs = ci->state;
         int wait = millis - gs.lastshot;
         if(!gs.isalive(gamemillis) ||
@@ -1863,6 +1896,7 @@ namespace server
                 int(from.x*DMF), int(from.y*DMF), int(from.z*DMF),
                 int(to.x*DMF), int(to.y*DMF), int(to.z*DMF),
                 ci->ownernum);
+	executeevent("onshot", (char *)int2char(ci->clientnum));//extremeserver
         gs.shotdamage += guns[gun].damage*(gs.quadmillis ? 4 : 1)*guns[gun].rays;
         switch(gun)
         {
@@ -2063,7 +2097,7 @@ namespace server
         {
             clientinfo *ci = clients[i];
             if(ci->state.state==CS_SPECTATOR || ci->state.aitype != AI_NONE || ci->clientmap[0] || ci->mapcrc >= 0 || (req < 0 && ci->warned)) continue;
-            formatstring(msg)("%s has modified map \"%s\"", colorname(ci), smapname);
+            formatstring(msg)("\f2Warning: \f7Player %s has modified map \"%s\"!", colorname(ci), smapname);
             sendf(req, 1, "ris", N_SERVMSG, msg);
             if(req < 0) ci->warned = true;
         }
@@ -2075,7 +2109,7 @@ namespace server
             {
                 clientinfo *ci = clients[j];
                 if(ci->state.state==CS_SPECTATOR || ci->state.aitype != AI_NONE || !ci->clientmap[0] || ci->mapcrc != info.crc || (req < 0 && ci->warned)) continue;
-                formatstring(msg)("%s has modified map \"%s\"", colorname(ci), smapname);
+                formatstring(msg)("\f2Warning: \f7Player %s has modified map \"%s\"!", colorname(ci), smapname);
                 sendf(req, 1, "ris", N_SERVMSG, msg);
                 if(req < 0) ci->warned = true;
             }
@@ -2098,6 +2132,7 @@ namespace server
         clientinfo *ci = getinfo(n);
         ci->clientnum = ci->ownernum = n;
         ci->connectmillis = totalmillis;
+	ci->lastpacket = totalmillis;//extremeserver
         ci->sessionid = (rnd(0x1000000)*((totalmillis%10000)+1))&0xFFFFFF;
         ci->local = true;
 
@@ -2116,6 +2151,7 @@ namespace server
         clientinfo *ci = getinfo(n);
         ci->clientnum = ci->ownernum = n;
         ci->connectmillis = totalmillis;
+	ci->lastpacket = totalmillis;//extremeserver
         ci->sessionid = (rnd(0x1000000)*((totalmillis%10000)+1))&0xFFFFFF;
 
         connects.add(ci);
@@ -2135,6 +2171,7 @@ namespace server
             ci->state.timeplayed += lastmillis - ci->state.lasttimeplayed;
             savescore(ci);
             sendf(-1, 1, "ri2", N_CDIS, n);
+	    executeevent("ondisconnect", (char *)int2char(n)); //extremeserver
             clients.removeobj(ci);
             aiman::removeai(ci);
             if(!numclients(-1, false, true)) noclients(); // bans clear when server empties
@@ -2273,7 +2310,7 @@ namespace server
         else if(!requestmasterf("reqauth %u %s\n", ci->authreq, ci->authname))
         {
             ci->cleanauth();
-            sendf(ci->clientnum, 1, "ris", N_SERVMSG, "not connected to authentication server");
+            sendf(ci->clientnum, 1, "ris", N_SERVMSG, "\f3Error: \f7You aren't connected to authentication server.");
         }
         if(ci->authreq) return true;
         if(ci->connectauth) disconnect_client(ci->clientnum, ci->connectauth);
@@ -2313,7 +2350,7 @@ namespace server
         else if(!requestmasterf("confauth %u %s\n", id, val))
         {
             ci->cleanauth();
-            sendf(ci->clientnum, 1, "ris", N_SERVMSG, "not connected to authentication server");
+            sendf(ci->clientnum, 1, "ris", N_SERVMSG, "\f3Error: \f7You aren't connected to authentication server.");
         }
         if(!ci->authreq && ci->connectauth) disconnect_client(ci->clientnum, ci->connectauth);
     }
@@ -2342,9 +2379,9 @@ namespace server
         if(mapdata) DELETEP(mapdata);
         if(!len) return;
         mapdata = opentempfile("mapdata", "w+b");
-        if(!mapdata) { sendf(sender, 1, "ris", N_SERVMSG, "failed to open temporary file for map"); return; }
+        if(!mapdata) { sendf(sender, 1, "ris", N_SERVMSG, "\f3Error: \f7Failed to open temporary file to save map."); return; }
         mapdata->write(data, len);
-        sendservmsgf("[%s sent a map to server, \"/getmap\" to receive it]", colorname(ci));
+        sendservmsgf("\f4Upload: \f7Player %s has sent a map to server. Please type \"/getmap\" to receive it.", colorname(ci));
     }
 
     void sendclipboard(clientinfo *ci)
@@ -2389,8 +2426,8 @@ namespace server
         aiman::addclient(ci);
 
         if(m_demo) setupdemoplayback();
-
         if(servermotd[0]) sendf(ci->clientnum, 1, "ris", N_SERVMSG, servermotd);
+	executeevent("onconnect", (char *)int2char(ci->clientnum)); //extremeserver
     }
 
 	void say(const char*str)
@@ -2720,23 +2757,22 @@ namespace server
 
             case N_TEXT:
             {
-                //QUEUE_AI;
-                //QUEUE_MSG;
                 getstring(text, p);
-                filtertext(text, text);
-				if(extreme::isflooding(ci,(int)type))break;//extremeserver
-				if(strlen(text)>strlen(command_prefix) && (strncmp(command_prefix, text, strlen(command_prefix))==0))
+                //filtertext(text, text, true, true);
+		if(extreme::isflooding(ci,(int)type))break;//extremeserver
+		if(strlen(text)>strlen(command_prefix) && (strncmp(command_prefix, text, strlen(command_prefix))==0))
 				{
-					command_text=text;
-					command_caller=(int)ci->clientnum;
+					command_text=newstring(text);
+					command_caller=ci->clientnum;
 					extreme::executecommandhandler();//extremeserver
 					command_caller = -1;
 					command_text = newstring("");
 					break;
 				}
-				QUEUE_INT(N_TEXT);//extremeserver
+		executetextevent("ontext", ci->clientnum, text); // extremeserver
+		QUEUE_AI; 
+		QUEUE_INT(N_TEXT);//extremeserver
                 QUEUE_STR(text);//extremeserver
-				//QUEUE_AI; 
                 if(isdedicatedserver()) logoutf("%s: %s", colorname(cq), text);
                 break;
             }
@@ -2745,9 +2781,10 @@ namespace server
             {
                 getstring(text, p);
                 if(!ci || !cq || (ci->state.state==CS_SPECTATOR && !ci->local && !ci->privilege) || !m_teammode || !cq->team[0]) break;
-				filtertext(text,text,true,true);//extremeserver
+		//filtertext(text,text,true,true);//extremeserver
+		//filtertext(text, text);
 
-				if(extreme::isflooding(ci,(int)type))break;//extremeserver
+		if(extreme::isflooding(ci,(int)type))break;//extremeserver
 
                 loopv(clients)
                 {
@@ -2756,6 +2793,7 @@ namespace server
                     sendf(t->clientnum, 1, "riis", N_SAYTEAM, cq->clientnum, text);
                 }
                 if(isdedicatedserver()) logoutf("%s <%s>: %s", colorname(cq), cq->team, text);
+		executetextevent("onteamchat", cq->clientnum, text);//extremeserver
                 break;
             }
 
@@ -2763,21 +2801,23 @@ namespace server
             {
                 //QUEUE_MSG;
                 getstring(text, p);
-				if(extreme::isflooding(ci,(int)type))break;//extremeserver
+		if(extreme::isflooding(ci,(int)type))break;//extremeserver
                 filtertext(ci->name, text, false, MAXNAMELEN);
                 if(!ci->name[0]) copystring(ci->name, "unnamed");
-				QUEUE_INT(N_SWITCHNAME);
+		QUEUE_INT(N_SWITCHNAME);
                 QUEUE_STR(ci->name);
+		executeevent("onswitchname", eventarglist(2, int2char(ci->clientnum), ci->name)); //extremeserver
                 break;
             }
 
             case N_SWITCHMODEL:
             {
                 ci->playermodel = getint(p);
-				if(extreme::isflooding(ci,(int)type))break;
-				QUEUE_INT(N_SWITCHMODEL);
-				QUEUE_INT(ci->playermodel);
-				//QUEUE_MSG;
+		if(extreme::isflooding(ci,(int)type))break;//extremeserver
+		QUEUE_INT(N_SWITCHMODEL);
+		QUEUE_INT(ci->playermodel);
+		executeevent("onswitchmodel", eventarglist(2, int2char(ci->clientnum), int2char(ci->playermodel))); //extremeserver
+		//QUEUE_MSG;
                 break;
             }
 
@@ -2792,6 +2832,7 @@ namespace server
                     copystring(ci->team, text);
                     aiman::changeteam(ci);
                     sendf(-1, 1, "riisi", N_SETTEAM, sender, ci->team, ci->state.state==CS_SPECTATOR ? -1 : 0);
+		    executeevent("onswitchteam", eventarglist(2, int2char(ci->clientnum), ci->team)); //extremeserver
                 }
                 break;
             }
@@ -2895,7 +2936,7 @@ namespace server
                     }
                     else
                     {
-                        defformatstring(s)("mastermode %d is disabled on this server", mm);
+                        defformatstring(s)("\f3Error: \f7Mastermode %s [%d] is disabled on this server.", mastermodename(mm), mm);
                         sendf(sender, 1, "ris", N_SERVMSG, s);
                     }
                 }
@@ -2907,7 +2948,8 @@ namespace server
                 if(ci->privilege || ci->local)
                 {
                     bannedips.shrink(0);
-                    sendservmsg("cleared all bans");
+                    sendservmsgf("\f0Information: \f7Player %s(%d) has cleared all bans.", ci->name, ci->clientnum);
+		    executeevent("onclearbans", ci->name); //extremeserver
                 }
                 break;
             }
@@ -2977,11 +3019,11 @@ namespace server
                 if(ci->privilege < (restrictdemos ? PRIV_ADMIN : PRIV_MASTER) && !ci->local) break;
                 if(!maxdemos || !maxdemosize) 
                 {
-                    sendf(ci->clientnum, 1, "ris", N_SERVMSG, "the server has disabled demo recording");
+                    sendf(ci->clientnum, 1, "ris", N_SERVMSG, "\f3Error: \f7The server has disabled demo recording.");
                     break;
                 }
                 demonextmatch = val!=0;
-                sendservmsgf("demo recording is %s for next match", demonextmatch ? "enabled" : "disabled");
+                sendservmsgf("\f4Demo: \f7Demo recording is %s for next match.", demonextmatch ? "enabled" : "disabled");
                 break;
             }
 
@@ -3014,11 +3056,11 @@ namespace server
             }
 
             case N_GETMAP:
-                if(!mapdata) sendf(sender, 1, "ris", N_SERVMSG, "no map to send");
-                else if(ci->getmap) sendf(sender, 1, "ris", N_SERVMSG, "already sending map");
+                if(!mapdata) sendf(sender, 1, "ris", N_SERVMSG, "\f3Error: \f7Here's no map to send.");
+                else if(ci->getmap) sendf(sender, 1, "ris", N_SERVMSG, "\f2Warning: \f7You're already getting the map.");
                 else
                 {
-                    sendservmsgf("[%s is getting the map]", colorname(ci));
+                    sendservmsgf("\f0Information: \f7Player %s is getting the map.", colorname(ci));
                     if((ci->getmap = sendfile(sender, 2, mapdata, "ri", N_SENDMAP)))
                         ci->getmap->freeCallback = freegetmap;
                     ci->needclipboard = totalmillis ? totalmillis : 1;

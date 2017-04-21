@@ -6,6 +6,11 @@ extern int totalmillis;                 // total elapsed time
 extern uint totalsecs;
 extern int gamespeed, paused;
 
+// extremeserver time variables (for flood protection)
+extern unsigned int curtime2;
+extern unsigned int lastmillis2;
+extern unsigned int totalmillis2;
+
 enum
 {
     MATF_INDEX_SHIFT  = 0,

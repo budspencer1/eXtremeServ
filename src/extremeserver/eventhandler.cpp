@@ -2,7 +2,7 @@
  * Project: eXtremeServ Sauerbraten
  * File Name: eventhandler.cpp
  * Author: BudSpencer
- * Date: 02, 2017
+ * Date: 04, 2017
  * 
  * Purpose: define eventhandler functions
 */
@@ -10,61 +10,74 @@
 
 #include "eventhandler.h"
 
-SVAR(event_ident, "eXtreme_EventInterpreter ");
-SVAR(event_args, "");
 SVAR(event_type, "");
+SVAR(event_args, "");
 
 namespace extreme 
 {	
-	void executeident(char *ident_, const char *eventtype, const char *args)
+	char *eventarglist(int count, ...)
 	{
-		event_type = (char *)eventtype;
-		event_args = (char *)args;
-		execute(event_ident);
-		event_type = newstring("");// reset values
-		event_args = newstring("");// reset values
-	}
-	
-	void executeevent(const char *eventtype, const char *arguments)
-	{
-		executeident(event_ident, eventtype, arguments);
-	}
-	
-	const char *concateventargs(int count, ...)
-	{
-		const char *res = newstring("");
-		va_list arguments;
-		va_start(arguments, count);
+		va_list args;
+		va_start(args, count);
+		char *text = newstring("", MAXTRANS);
 		for(int i = 0; i < count; i++)
 		{
-			const char *temp = NULL;
-			temp = va_arg(arguments, const char *);
-			res = strcat((char *)res, temp);
-			res = strcat((char *)res, " ");
+			text = strcat(text, va_arg(args, const char*));
+			text = strcat(text, " ");
 		}
-		va_end(arguments);
-		return res;
+		va_end(args);
+		return text;
+	}
+
+	int executeeventident()
+	{
+		int ret = execute("do ( getalias eXtreme_EventInterpreter )");
+		return ret;
+	}
+
+	void executeevent(const char *eventtype, char *arglist)
+	{
+		event_type = (char *)eventtype;
+		event_args = arglist;
+		executeeventident();
+		event_type = newstring("");
+		event_args = newstring("");
 	}
 	
-	// write int into char buffer
+	// for text events like "ontext" or "onteamchat"
+	void executetextevent(const char *eventtype, int cn, char text[5000])
+	{
+		char txt[5000] = { "do ( eXtreme_EventInterpreter " };
+		event_type = (char *)eventtype;
+		strcat(txt, int2char(cn));
+		strcat(txt, " ");
+		strcat(txt, escapestring(text));
+		strcat(txt, " )");
+		execute(txt);
+	}
+	
 	const char *int2char(int x)
 	{
-		char *res = newstring("");
-		sprintf(res, "%d", x);
-		return res;
+		char *result = newstring("", MAXTRANS);
+		sprintf(result, "%d", x);
+		return (const char*)result;
 	}
-	
-	// write float into char buffer
+
 	const char *float2char(float x)
 	{
-		char *res = newstring("");
-		sprintf(res, "%g", x);
-		return res;
+		char *result = newstring("", MAXTRANS);
+		sprintf(result, "%g", x);
+		return (const char*)result;
 	}
+	
+	// only for debugging
+	inline void test()
+	{
+		char txt[5000] = { "<enter test text here>" };
+		executetextevent("ontext", 0, txt);
+	}
+	//COMMAND(test, "");
 };
-
-
-
 
 
 

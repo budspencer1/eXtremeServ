@@ -2,6 +2,9 @@
 // runs dedicated or as client coroutine
 
 #include "engine.h"
+#include "eventhandler.h"//extremeserver
+
+using namespace extreme;
 
 #define LOGSTRLEN 512
 
@@ -570,6 +573,7 @@ VARF(serverport, 0, server::serverport(), 0xFFFF, { if(!serverport) serverport =
 
 #ifdef STANDALONE
 int curtime = 0, lastmillis = 0, totalmillis = 0;
+unsigned int curtime2 = 0, lastmillis2 = 0, totalmillis2 = 0;//extremeserver
 #endif
 
 void updatemasterserver()
@@ -612,6 +616,16 @@ void serverslice(bool dedicated, uint timeout)   // main server update, called f
         if(server::ispaused()) curtime = 0;
         lastmillis += curtime;
         totalmillis = millis;
+	// flood protection variables
+	unsigned int millis2 = enet_time_get(), elapsed2 = millis2 - totalmillis2;
+        static unsigned int timeerr2 = 0;
+        unsigned int scaledtime2 = server::scaletime(elapsed2) + timeerr2;
+        curtime2 = scaledtime2/100;
+        timeerr2 = scaledtime2%100;
+        if(server::ispaused()) curtime2 = 0;
+        lastmillis2 += curtime2;
+        totalmillis2 = millis2;
+	// end of flood protection time update
         updatetime();
     }
     server::serverupdate();
@@ -655,7 +669,11 @@ void serverslice(bool dedicated, uint timeout)   // main server update, called f
             case ENET_EVENT_TYPE_RECEIVE:
             {
                 client *c = (client *)event.peer->data;
+		server::clientinfo *ci = (server::clientinfo *)c->info;
                 if(c) process(event.packet, c->num, event.channelID);
+		ci->pj = totalmillis - ci->lastpacket;//extremeserver
+		ci->lastpacket = totalmillis;//extremeserver
+		executeevent("onenetpacket", eventarglist(2, int2char(ci->clientnum), int2char(ci->pj)));//extremeserver
                 if(event.packet->referenceCount==0) enet_packet_destroy(event.packet);
                 break;
             }
@@ -1049,6 +1067,12 @@ bool setuplistenserver(bool dedicated)
     else enet_socket_set_option(lansock, ENET_SOCKOPT_NONBLOCK, 1);
     return true;
 }
+
+unsigned int masteradd()
+{
+	return masteraddress.host;
+}
+COMMANDN(ip, masteradd, "");
 
 void initserver(bool listen, bool dedicated)
 {

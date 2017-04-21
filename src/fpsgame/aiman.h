@@ -82,6 +82,7 @@ namespace aiman
 
 	bool addai(int skill, int limit)
 	{
+		executeevent("onaddbot", (char *)int2char(skill));
 		int numai = 0, cn = -1, maxai = limit >= 0 ? min(limit, MAXBOTS) : MAXBOTS;
 		loopv(bots)
         {
@@ -128,6 +129,7 @@ namespace aiman
 
 	void deleteai(clientinfo *ci)
 	{
+	executeevent("ondelbot", eventarglist(0));//extremeserver
         int cn = ci->clientnum - MAXCLIENTS;
         if(!bots.inrange(cn)) return;
         if(smode) smode->leavegame(ci, true);
@@ -228,21 +230,22 @@ namespace aiman
 	void reqadd(clientinfo *ci, int skill)
 	{
         if(!ci->local && !ci->privilege) return;
-        if(!addai(skill, !ci->local && ci->privilege < PRIV_ADMIN ? botlimit : -1)) sendf(ci->clientnum, 1, "ris", N_SERVMSG, "failed to create or assign bot");
+        if(!addai(skill, !ci->local && ci->privilege < PRIV_ADMIN ? botlimit : -1)) sendf(ci->clientnum, 1, "ris", N_SERVMSG, "\f3Error: \f7Failed to create or assign bot.");
 	}
 
 	void reqdel(clientinfo *ci)
 	{
         if(!ci->local && !ci->privilege) return;
-        if(!deleteai()) sendf(ci->clientnum, 1, "ris", N_SERVMSG, "failed to remove any bots");
+        if(!deleteai()) sendf(ci->clientnum, 1, "ris", N_SERVMSG, "\f3Error: \f7Failed to remove any bots.");
 	}
 
     void setbotlimit(clientinfo *ci, int limit)
     {
         if(ci && !ci->local && ci->privilege < PRIV_ADMIN) return;
+	executeevent("onbotlimit", eventarglist(2, int2char(ci->clientnum), int2char(clamp(limit, 0, MAXBOTS))));// extremeserver
         botlimit = clamp(limit, 0, MAXBOTS);
         dorefresh = true;
-        defformatstring(msg)("bot limit is now %d", botlimit);
+        defformatstring(msg)("\f0Information: \f7The new bot limit is %d and has been set by %s(%d).", botlimit, ci->name, ci->clientnum);
         sendservmsg(msg);
     }
 
@@ -251,7 +254,7 @@ namespace aiman
         if(ci && !ci->local && !ci->privilege) return;
         botbalance = balance ? 1 : 0;
         dorefresh = true;
-        defformatstring(msg)("bot team balancing is now %s", botbalance ? "enabled" : "disabled");
+        defformatstring(msg)("\f0Information: \f7Bot team balancing is now %s.", botbalance ? "enabled" : "disabled");
         sendservmsg(msg);
     }
 

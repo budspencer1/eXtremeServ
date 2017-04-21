@@ -58,22 +58,24 @@ namespace extreme
 		bool flood=false;
 		size_t msg=gettype(type);
 		fstate&fs=ci->state.exts.floodstate[msg];
-		if(((int)totalmillis-fs.event)<FDELAY)fs.strikes++;
+		if((totalmillis2-fs.event)<FDELAY)fs.strikes++;
 		if(fs.strikes>=STRIKE)
 		{
-			fs.limit=totalmillis+FMUTE;
+			fs.limit=totalmillis2+FMUTE;
 			fs.strikes=0;
 		}
-		if(((int)totalmillis-fs.limit)<0)
+		if((totalmillis2-fs.limit)<0)
 		{
 			flood=true;
-			if(((int)totalmillis-fs.warning)>FTRIGGER)
+			if((totalmillis2-fs.warning)>FTRIGGER)
 			{
-				fs.warning=totalmillis;
-				server::sendservmsg("fUkIN FLOODA SPAST,oio,xd,lol");
+				fs.warning=totalmillis2;
+				string message;
+				formatstring(message)("\f6Flood Protection: \f7You're muted for %d seconds due to spamming.", FMUTE / 1000);
+				sendf(ci->clientnum, 1, "ris", N_SERVMSG, message);
 			}
 		}
-		fs.event=totalmillis;
-		return(bool)flood;
+		fs.event=totalmillis2;
+		return flood;
 	}
 };

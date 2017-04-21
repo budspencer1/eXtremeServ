@@ -134,6 +134,7 @@ static inline T clamp(T a, U b, U c)
 
 #define MAXSTRLEN 260
 typedef char string[MAXSTRLEN];
+typedef char character[5000];
 
 inline void vformatstring(char *d, const char *fmt, va_list v, int len = MAXSTRLEN) { _vsnprintf(d, len, fmt, v); d[len-1] = 0; }
 inline char *copystring(char *d, const char *s, size_t len = MAXSTRLEN) { strncpy(d, s, len); d[len-1] = 0; return d; }

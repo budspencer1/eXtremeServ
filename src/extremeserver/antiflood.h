@@ -17,7 +17,7 @@
 #define FDELAY 500
 #define STRIKE 5
 #define FMUTE 10000
-#define FTRIGGER 20000 
+#define FTRIGGER 15000 
 
 namespace server
 {

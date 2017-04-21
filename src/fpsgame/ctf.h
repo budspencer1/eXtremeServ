@@ -289,12 +289,14 @@ struct ctfclientmode : clientmode
             {
                 returnflag(i);
                 sendf(-1, 1, "ri4", N_RETURNFLAG, ci->clientnum, i, ++f.version);
+		executeevent("onreturnflag", eventarglist(3, int2char(ci->clientnum), int2char(i), int2char(++f.version)));// extremeserver
             }
             else
             {
                 ivec o(vec(ci->state.o).mul(DMF));
                 sendf(-1, 1, "ri7", N_DROPFLAG, ci->clientnum, i, ++f.version, o.x, o.y, o.z);
                 dropflag(i, o.tovec().div(DMF), lastmillis, dropper ? dropper->clientnum : ci->clientnum, dropper && dropper!=ci);
+		executeevent("ondropflag", eventarglist(2, int2char(ci->clientnum), ctfflagteam(f.team)));//extremeserver
             }
         }
     }
@@ -345,6 +347,7 @@ struct ctfclientmode : clientmode
         int team = ctfteamflag(ci->team), score = addscore(team, 1);
         if(m_hold) spawnflag(goal);
         sendf(-1, 1, "rii9", N_SCOREFLAG, ci->clientnum, relay, relay >= 0 ? ++flags[relay].version : -1, goal, ++flags[goal].version, flags[goal].spawnindex, team, score, ci->state.flags);
+	executeevent("onscoreflag", eventarglist(2, int2char(ci->clientnum), ctfflagteam(team)));//extremeserver
         if(score >= FLAGLIMIT) startintermission();
     }
 
@@ -359,6 +362,7 @@ struct ctfclientmode : clientmode
             loopvj(flags) if(flags[j].owner==ci->clientnum) return;
             ownflag(i, ci->clientnum, lastmillis);
             sendf(-1, 1, "ri4", N_TAKEFLAG, ci->clientnum, i, ++f.version);
+	    executeevent("onstealflag", eventarglist(3, int2char(ci->clientnum), ctfflagteam(f.team), int2char(f.droptime ? 0 : 1)));//extremeserver
         }
         else if(m_protect)
         {
@@ -368,6 +372,7 @@ struct ctfclientmode : clientmode
         {
             returnflag(i);
             sendf(-1, 1, "ri4", N_RETURNFLAG, ci->clientnum, i, ++f.version);
+	    executeevent("onreturnflag", eventarglist(2, int2char(ci->clientnum), ctfflagteam(f.team)));// extremeserver
         }
         else
         {
@@ -386,11 +391,13 @@ struct ctfclientmode : clientmode
                 returnflag(i, m_protect ? lastmillis : 0);
                 if(m_hold) spawnflag(i);
                 sendf(-1, 1, "ri6", N_RESETFLAG, i, ++f.version, f.spawnindex, m_hold ? 0 : f.team, m_hold ? 0 : addscore(f.team, m_protect ? -1 : 0));
+		executeevent("onresetflag", (char *)ctfflagteam(f.team));//extremeserver
             }
             if(f.invistime && lastmillis - f.invistime >= INVISFLAGTIME)
             {
                 f.invistime = 0;
                 sendf(-1, 1, "ri3", N_INVISFLAG, i, 0);
+		executeevent("oninvisflag", (char *)ctfflagteam(f.team));//extremeserver
             }
             if(m_hold && f.owner>=0 && lastmillis - f.owntime >= HOLDSECS*1000)
             {
@@ -400,6 +407,7 @@ struct ctfclientmode : clientmode
                 {
                     spawnflag(i);
                     sendf(-1, 1, "ri6", N_RESETFLAG, i, ++f.version, f.spawnindex, 0, 0);
+		    executeevent("onresetflag", (char *)ctfflagteam(f.team));//extremeserver
                 }
             }
         }
