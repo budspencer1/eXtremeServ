@@ -673,7 +673,7 @@ void serverslice(bool dedicated, uint timeout)   // main server update, called f
                 if(c) process(event.packet, c->num, event.channelID);
 		ci->pj = totalmillis - ci->lastpacket;//extremeserver
 		ci->lastpacket = totalmillis;//extremeserver
-		executeevent("onenetpacket", eventarglist(2, int2char(ci->clientnum), int2char(ci->pj)));//extremeserver
+		//executeevent("onenetpacket", eventarglist(2, int2char(ci->clientnum), int2char(ci->pj)));//extremeserver
                 if(event.packet->referenceCount==0) enet_packet_destroy(event.packet);
                 break;
             }

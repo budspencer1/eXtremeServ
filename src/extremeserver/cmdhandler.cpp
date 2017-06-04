@@ -21,8 +21,9 @@ namespace extreme
 		{
 			return true;
 		}
+		printf("Internal Error: Cannot execute Command Handler (%s)", command_handler);
+		DELETEP(id);
 		return false;
-		printf("Error: Cannot execute Command Handler (%s)",command_handler);
 	}
 
 	void executecommandhandler()
@@ -30,5 +31,6 @@ namespace extreme
 		if(!(bool)checkforcommandhandler())return;
 		char*command=newstring(command_exec);
 		execute(command);
+		DELETEP(command);
 	}
 };

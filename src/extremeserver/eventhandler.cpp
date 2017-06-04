@@ -15,7 +15,7 @@ SVAR(event_args, "");
 
 namespace extreme 
 {	
-	char *eventarglist(int count, ...)
+	void eventarglist(char *list, int count, ...)
 	{
 		va_list args;
 		va_start(args, count);
@@ -26,7 +26,8 @@ namespace extreme
 			text = strcat(text, " ");
 		}
 		va_end(args);
-		return text;
+		*list = *text;
+		DELETEP(text);
 	}
 
 	int executeeventident()

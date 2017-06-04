@@ -97,6 +97,7 @@ namespace server
     VAR(command_caller,0,-1,INT_MAX); // command caller // extremeserver
 	SVAR(command_text,""); // command text (arguments)  // extremeserver
 	SVAR(command_prefix,"#"); // command trigger (prefix) // extremeserver
+SVAR(ev_args, "");
 
     void maprotationreset()
     {
@@ -700,7 +701,6 @@ namespace server
         if(!demorecord) return;
 
         DELETEP(demorecord);
-	executeevent("onstopdemo", eventarglist(0));//extremeserver
 
         if(!demotmp) return;
         if(!maxdemos || !maxdemosize) { DELETEP(demotmp); return; }
@@ -738,7 +738,6 @@ namespace server
         if(!f) { DELETEP(demotmp); return; }
 
         sendservmsg("\f4Demo: \f7Server's recording demo for this match.");
-	executeevent("onrecorddemo", eventarglist(0));//extremeserver
 
         demorecord = f;
 
@@ -756,7 +755,7 @@ namespace server
 
     void listdemos(int cn)
     {
-	executeevent("onlistdemos", (char *)int2char(cn));//extremeserver
+	eventarglist(ev_args, 1, int2char(cn));
         packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
         putint(p, N_SENDDEMOLIST);
         putint(p, demos.length());
@@ -766,7 +765,7 @@ namespace server
 
     void cleardemos(int n)
     {
-	executeevent("oncleardemos", (char *)int2char(n));//extremeserver
+	eventarglist(ev_args, 1, int2char(n));
         if(!n)
         {
             loopv(demos) delete[] demos[i].data;
@@ -1359,7 +1358,6 @@ namespace server
             gs.health, gs.maxhealth,
             gs.armour, gs.armourtype,
             gs.gunselect, GUN_PISTOL-GUN_SG+1, &gs.ammo[GUN_SG]);
-	executeevent("onspawn", (char *)int2char(ci->clientnum)); //extremeserver
         gs.lastspawn = gamemillis;
     }
 
@@ -1633,7 +1631,6 @@ namespace server
 
         if(smode) smode->setup();
 	if(recorddemo) demonextmatch = true;
-	executeevent("onmapstart", eventarglist(0));//extremeserver
     }
 
     void rotatemap(bool next)
@@ -1750,7 +1747,6 @@ namespace server
             sendf(-1, 1, "ri2", N_TIMEUP, 0);
             if(smode) smode->intermission();
             changegamespeed(100);
-	    executeevent("onintermission", eventarglist(0));//extremeserver
             interm = gamemillis + intermissiontime;
         }
     }
@@ -1807,18 +1803,7 @@ namespace server
             }
             ts.deadflush = ts.lastdeath + DEATHMILLIS;
             // don't issue respawn yet until DEATHMILLIS has elapsed
-            // ts.respawn();
-	    if(onfrag) executeevent("onfrag", eventarglist(2, int2char(actor->clientnum), int2char(target->clientnum)));//extremeserver
-	    if(ondeath) executeevent("ondeath", eventarglist(2, int2char(target->clientnum), int2char(actor->clientnum)));//extremeserver
-	    if(onteamkill) executeevent("onteamkill", eventarglist(2, int2char(actor->clientnum), int2char(target->clientnum)));//extremeserver
-	    if(onsuicide)
-	    {	
-		target->state.suicides++;//extremeserver
-		executeevent("onsuicide", (char *)int2char(target->clientnum));//extremeserver
-	    }
         }
-	// only if no self hit
-	if(actor != target) executeevent("onhit", eventarglist(2, int2char(actor->clientnum), int2char(target->clientnum)));//extremeserver
     }
 
     void suicide(clientinfo *ci)
@@ -1837,7 +1822,6 @@ namespace server
         gs.lastdeath = gamemillis;
         gs.respawn();
 	ci->state.suicides++;//extremeserver
-	executeevent("onsuicide", (char *)int2char(ci->clientnum));//extremeserver
     }
 
     void suicideevent::process(clientinfo *ci)
@@ -1896,7 +1880,6 @@ namespace server
                 int(from.x*DMF), int(from.y*DMF), int(from.z*DMF),
                 int(to.x*DMF), int(to.y*DMF), int(to.z*DMF),
                 ci->ownernum);
-	executeevent("onshot", (char *)int2char(ci->clientnum));//extremeserver
         gs.shotdamage += guns[gun].damage*(gs.quadmillis ? 4 : 1)*guns[gun].rays;
         switch(gun)
         {
@@ -2171,7 +2154,6 @@ namespace server
             ci->state.timeplayed += lastmillis - ci->state.lasttimeplayed;
             savescore(ci);
             sendf(-1, 1, "ri2", N_CDIS, n);
-	    executeevent("ondisconnect", (char *)int2char(n)); //extremeserver
             clients.removeobj(ci);
             aiman::removeai(ci);
             if(!numclients(-1, false, true)) noclients(); // bans clear when server empties
@@ -2427,7 +2409,6 @@ namespace server
 
         if(m_demo) setupdemoplayback();
         if(servermotd[0]) sendf(ci->clientnum, 1, "ris", N_SERVMSG, servermotd);
-	executeevent("onconnect", (char *)int2char(ci->clientnum)); //extremeserver
     }
 
 	void say(const char*str)
@@ -2769,7 +2750,6 @@ namespace server
 					command_text = newstring("");
 					break;
 				}
-		executetextevent("ontext", ci->clientnum, text); // extremeserver
 		QUEUE_AI; 
 		QUEUE_INT(N_TEXT);//extremeserver
                 QUEUE_STR(text);//extremeserver
@@ -2793,7 +2773,6 @@ namespace server
                     sendf(t->clientnum, 1, "riis", N_SAYTEAM, cq->clientnum, text);
                 }
                 if(isdedicatedserver()) logoutf("%s <%s>: %s", colorname(cq), cq->team, text);
-		executetextevent("onteamchat", cq->clientnum, text);//extremeserver
                 break;
             }
 
@@ -2806,7 +2785,6 @@ namespace server
                 if(!ci->name[0]) copystring(ci->name, "unnamed");
 		QUEUE_INT(N_SWITCHNAME);
                 QUEUE_STR(ci->name);
-		executeevent("onswitchname", eventarglist(2, int2char(ci->clientnum), ci->name)); //extremeserver
                 break;
             }
 
@@ -2816,7 +2794,6 @@ namespace server
 		if(extreme::isflooding(ci,(int)type))break;//extremeserver
 		QUEUE_INT(N_SWITCHMODEL);
 		QUEUE_INT(ci->playermodel);
-		executeevent("onswitchmodel", eventarglist(2, int2char(ci->clientnum), int2char(ci->playermodel))); //extremeserver
 		//QUEUE_MSG;
                 break;
             }
@@ -2832,7 +2809,6 @@ namespace server
                     copystring(ci->team, text);
                     aiman::changeteam(ci);
                     sendf(-1, 1, "riisi", N_SETTEAM, sender, ci->team, ci->state.state==CS_SPECTATOR ? -1 : 0);
-		    executeevent("onswitchteam", eventarglist(2, int2char(ci->clientnum), ci->team)); //extremeserver
                 }
                 break;
             }
@@ -2949,7 +2925,6 @@ namespace server
                 {
                     bannedips.shrink(0);
                     sendservmsgf("\f0Information: \f7Player %s(%d) has cleared all bans.", ci->name, ci->clientnum);
-		    executeevent("onclearbans", ci->name); //extremeserver
                 }
                 break;
             }

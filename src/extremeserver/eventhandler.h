@@ -15,7 +15,7 @@
 
 namespace extreme 
 {
-	char *eventarglist(int count, ...);	
+	void eventarglist(char *list, int count, ...);	
 	void executeevent(const char *eventtype, char *arglist);
 	void executetextevent(const char *eventtype, int cn, char text[5000]);
 	int executeeventident(const char *name);
